@@ -9,14 +9,14 @@ tags:
 orders:
   config:
     dbEngine: "mysql"
-    dbHost: "://amazonaws.com" # Replace with your dynamic terraform RDS endpoints
+    dbHost: "bedrock-mysql.c2hogwcqa2xe.us-east-1.rds.amazonaws.com" # Replace with your dynamic terraform RDS endpoints
     dbUser: "dbadmin"
     dbPassword: "SecurePassword123!"
 
 catalog:
   config:
     dbEngine: "postgresql"
-    dbHost: "://amazonaws.com" # Replace with your dynamic terraform RDS endpoints
+    dbHost: "bedrock-postgres.c2hogwcqa2xe.us-east-1.rds.amazonaws.com" # Replace with your dynamic terraform RDS endpoints
     dbUser: "dbadmin"
     dbPassword: "SecurePassword123!"
 
