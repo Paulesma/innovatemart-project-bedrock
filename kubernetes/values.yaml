@@ -1,0 +1,26 @@
+# kubernetes/values.yaml
+namespace: retail-app
+
+tags:
+  mysql: false      # Disables in-cluster MySQL container
+  postgresql: false # Disables in-cluster Postgres container
+  dynamodb: false   # Disables in-cluster DynamoDB container
+
+orders:
+  config:
+    dbEngine: "mysql"
+    dbHost: "://amazonaws.com" # Replace with your dynamic terraform RDS endpoints
+    dbUser: "dbadmin"
+    dbPassword: "SecurePassword123!"
+
+catalog:
+  config:
+    dbEngine: "postgresql"
+    dbHost: "://amazonaws.com" # Replace with your dynamic terraform RDS endpoints
+    dbUser: "dbadmin"
+    dbPassword: "SecurePassword123!"
+
+carts:
+  config:
+    awsRegion: "us-east-1"
+    dynamoTableName: "bedrock-carts"
