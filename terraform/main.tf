@@ -121,15 +121,21 @@ resource "aws_security_group" "db_sg" {
 # 3. AMAZON EKS CLUSTER (>= v1.34.0)
 # ==========================================
 resource "aws_iam_role" "eks_cluster" {
-  name = "project-bedrock-eks-cluster-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "://amazonaws.com" }
-    }]
-  })
+  name               = "project-bedrock-eks-cluster-role"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "eks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_iam_role_policy_attachment" "cluster_policy" {
@@ -152,15 +158,21 @@ resource "aws_eks_cluster" "main" {
 }
 
 resource "aws_iam_role" "eks_nodes" {
-  name = "project-bedrock-node-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "://amazonaws.com" }
-    }]
-  })
+  name               = "project-bedrock-node-role"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_iam_role_policy_attachment" "node_Worker" {
@@ -226,7 +238,7 @@ resource "aws_db_instance" "postgres" {
   engine_version         = "15"
   instance_class         = "db.t3.micro"
   identifier             = "bedrock-postgres"
-  db_name                = "catalog"
+  db_name                = "catalogdb" # Fixed PostgreSQL reserved database name conflict
   username               = "dbadmin"
   password               = "SecurePassword123!"
   db_subnet_group_name   = aws_db_subnet_group.db_subnets.name
@@ -257,16 +269,20 @@ resource "aws_iam_user_policy_attachment" "dev_readonly" {
 }
 
 resource "aws_iam_user_policy" "dev_s3_put" {
-  name = "bedrock-dev-s3-put"
-  user = aws_iam_user.dev.name
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["s3:PutObject"]
-      Resource = ["arn:aws:s3:::bedrock-assets-alt-soe-025-3974/*"]
-    }]
-  })
+  name   = "bedrock-dev-s3-put"
+  user   = aws_iam_user.dev.name
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::bedrock-assets-alt-soe-025-3974/*"]
+    }
+  ]
+}
+EOF
 }
 
 # ==========================================
@@ -278,15 +294,21 @@ resource "aws_s3_bucket" "assets" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name = "bedrock-lambda-execution-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "://amazonaws.com" }
-    }]
-  })
+  name               = "bedrock-lambda-execution-role"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -307,7 +329,7 @@ resource "aws_lambda_permission" "allow_s3" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.processor.function_name
-  principal     = "://amazonaws.com"
+  principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.assets.arn
 }
 
@@ -335,7 +357,7 @@ data "tls_certificate" "eks" {
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {
-  client_id_list  = ["://amazonaws.com"]
+  client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
   url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
@@ -343,21 +365,25 @@ resource "aws_iam_openid_connect_provider" "eks" {
 resource "aws_iam_role" "elbc_role" {
   name = "project-bedrock-alb-controller-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.eks.arn
-      }
-      Condition = {
-        StringEquals = {
-          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "${aws_iam_openid_connect_provider.eks.arn}"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
         }
       }
-    }]
-  })
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_iam_role_policy_attachment" "elbc_attach" {
@@ -367,7 +393,7 @@ resource "aws_iam_role_policy_attachment" "elbc_attach" {
 
 resource "helm_release" "lb_controller" {
   name       = "aws-load-balancer-controller"
-  repository = "https://github.io"
+  repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
 
