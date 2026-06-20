@@ -80,8 +80,8 @@ resource "aws_route_table_association" "private" {
 # 2. SECURITY GROUPS
 # ==========================================
 resource "aws_security_group" "eks_nodes" {
-  name        = "project-bedrock-node-sg"
-  vpc_id      = aws_vpc.main.id
+  name   = "project-bedrock-node-sg"
+  vpc_id = aws_vpc.main.id
   egress {
     from_port   = 0
     to_port     = 0
@@ -138,9 +138,9 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 }
 
 resource "aws_eks_cluster" "main" {
-  name     = "project-bedrock-cluster"
-  version  = "1.34"
-  role_arn = aws_iam_role.eks_cluster.arn
+  name                      = "project-bedrock-cluster"
+  version                   = "1.34"
+  role_arn                  = aws_iam_role.eks_cluster.arn
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   vpc_config {
@@ -191,7 +191,7 @@ resource "aws_eks_node_group" "main" {
   }
 
   instance_types = ["t3.medium"]
-  depends_on     = [
+  depends_on = [
     aws_iam_role_policy_attachment.node_Worker,
     aws_iam_role_policy_attachment.node_CNI,
     aws_iam_role_policy_attachment.node_Registry
@@ -235,9 +235,9 @@ resource "aws_db_instance" "postgres" {
 }
 
 resource "aws_dynamodb_table" "carts" {
-  name           = "bedrock-carts"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "id"
+  name         = "bedrock-carts"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
   attribute {
     name = "id"
     type = "S"
