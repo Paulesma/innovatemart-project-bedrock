@@ -19,8 +19,9 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = {
-    Name                     = "project-bedrock-public-${count.index}"
-    "kubernetes.io/role/elb" = "1"
+    Name                                            = "project-bedrock-public-${count.index}"
+    "kubernetes.io/role/elb"                        = "1"
+    "kubernetes.io/cluster/project-bedrock-cluster" = "shared" # Added tracking identification
   }
 }
 
@@ -30,8 +31,9 @@ resource "aws_subnet" "private" {
   cidr_block        = "10.0.${count.index + 10}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    Name                              = "project-bedrock-private-${count.index}"
-    "kubernetes.io/role/internal-elb" = "1"
+    Name                                            = "project-bedrock-private-${count.index}"
+    "kubernetes.io/role/internal-elb"               = "1"
+    "kubernetes.io/cluster/project-bedrock-cluster" = "shared" # Added tracking identification
   }
 }
 
