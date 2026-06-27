@@ -1,0 +1,38 @@
+name: Project Bedrock Teardown
+
+on:
+  workflow_dispatch: # Allows you to manually click "Run" in GitHub UI
+
+jobs:
+  cleanup-and-destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Use whatever auth your main pipeline uses (OIDC role or Secret Keys)
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      # STEP 2A: Manually delete the retail app to clear out the AWS Application Load Balancer
+      - name: Delete Kubernetes Resources
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name project-bedrock-cluster
+          # Delete the application so the AWS Load Balancer Controller can safely detach and delete the physical ALB
+          kubectl delete namespace retail-app --ignore-not-found=true
+          # Give AWS a moment to process the ALB deletion before Terraform runs
+          sleep 60 
+
+      # STEP 2B: Run the structural destroy
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
